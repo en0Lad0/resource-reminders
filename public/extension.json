@@ -2,7 +2,7 @@
   "name": "Resource Reminders",
   "version": "1.0.0",
   "manifest_version": 1,
-  "description": "D&D combat action economy tracker: skill cards, resource uses, short/long rest recovery, chain combo prompts, and a built-in dice roller with advantage/disadvantage.",
+  "description": "D&D combat action economy tracker: skill cards, resource uses, rest recovery, chain combos, and dice roller.",
   "author": "Your Name",
   "host": "index.html",
   "icons": {
