@@ -353,3 +353,20 @@ html, body {
 .popup .popup-buttons { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 .popup .chain-text { font-size: 14px; line-height: 1.5; margin-bottom: 16px; }
 .popup .chain-text b { color: var(--green); }
+
+/* Permanent close button on every popup (prevents stuck popups blocking UI) */
+.popup { position: relative; }
+.popup-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 5px;
+  line-height: 1;
+}
+.popup-close:hover { color: var(--red); background: var(--panel-2); }
