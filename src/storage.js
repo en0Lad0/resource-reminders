@@ -5,6 +5,17 @@ import OBR from "@owlbear-rodeo/sdk";
 
 export const STORAGE_NS = "com.resource-reminders/state";
 
+// Never let an unresponsive Owlbear SDK hang the UI — fall back fast.
+const OBR_TIMEOUT = 2500;
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(label + " timed out after " + ms + "ms")), ms)
+    )
+  ]);
+}
+
 export function isObrAvailable() {
   try {
     return !!(OBR && OBR.isAvailable && OBR.isAvailable());
@@ -16,32 +27,35 @@ export function isObrAvailable() {
 export async function loadState() {
   if (isObrAvailable()) {
     try {
-      // Prefer player metadata (per user). Room metadata is also readable.
-      const playerMeta = await OBR.player.getMetadata();
-      if (playerMeta && playerMeta[STORAGE_NS]) {
-        return playerMeta[STORAGE_NS];
-      }
-      const roomMeta = await OBR.room.getMetadata();
-      if (roomMeta && roomMeta[STORAGE_NS]) {
-        return roomMeta[STORAGE_NS];
-      }
+      const playerMeta = await withTimeout(OBR.player.getMetadata(), OBR_TIMEOUT, "OBR.player.getMetadata");
+      if (playerMeta && playerMeta[STORAGE_NS]) return playerMeta[STORAGE_NS];
+      const roomMeta = await withTimeout(OBR.room.getMetadata(), OBR_TIMEOUT, "OBR.room.getMetadata");
+      if (roomMeta && roomMeta[STORAGE_NS]) return roomMeta[STORAGE_NS];
     } catch (err) {
-      console.warn("[storage] OBR read failed, falling back to localStorage", err);
+      console.warn("[storage] OBR read failed, using localStorage:", err.message || err);
     }
   }
-  const raw = localStorage.getItem(STORAGE_NS);
-  return raw ? JSON.parse(raw) : null;
+  try {
+    const raw = localStorage.getItem(STORAGE_NS);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function saveState(state) {
+  // Always keep a local copy first — it is the instant source of truth for UI.
+  try {
+    localStorage.setItem(STORAGE_NS, JSON.stringify(state));
+  } catch {}
   if (isObrAvailable()) {
     try {
-      await OBR.player.setMetadata({ [STORAGE_NS]: state });
+      await withTimeout(OBR.player.setMetadata({ [STORAGE_NS]: state }), OBR_TIMEOUT, "OBR.player.setMetadata");
       return "obr";
     } catch (err) {
-      console.warn("[storage] OBR write failed, falling back to localStorage", err);
+      console.warn("[storage] OBR write failed (local copy kept):", err.message || err);
+      return "local";
     }
   }
-  localStorage.setItem(STORAGE_NS, JSON.stringify(state));
   return "local";
 }

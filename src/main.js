@@ -24,6 +24,14 @@ function log(msg, cls) {
   while (logEl.children.length > 6) logEl.lastChild.remove();
 }
 
+// Surface any runtime error in the log bar so it is visible inside Owlbear.
+window.addEventListener("error", (e) => {
+  log("JS error: " + (e.message || (e.error && e.error.message) || "unknown"), "warn");
+});
+window.addEventListener("unhandledrejection", (e) => {
+  log("Promise error: " + (e.reason && e.reason.message ? e.reason.message : e.reason || "unknown"), "warn");
+});
+
 // ---------- Chain flow (recursive, depth-guarded) ----------
 function afterUse(usedSkill) {
   const target = nextChainTarget(usedSkill, State.getSkills(), (w) => log(w, "warn"));
@@ -36,7 +44,6 @@ function afterUse(usedSkill) {
     usedSkill,
     target,
     () => {
-      // Yes: consume the chained skill
       const used = State.useSkill(target.id);
       if (!used) {
         resetChain();
@@ -54,17 +61,17 @@ function afterUse(usedSkill) {
 }
 
 function handleUse(id) {
-  const skill = State.getSkills().find((s) => s.id === id);
-  if (!skill) return;
-  const used = State.useSkill(id);
-  log(
-    `Used: ${used.name}${used.maxUses > 0 ? ` — ${used.currentUses}/${used.maxUses} left` : ""}`,
-    "ok"
-  );
-  if (used.diceFormula) {
-    showDicePopup(used, () => afterUse(used));
-  } else {
-    afterUse(used);
+  try {
+    const used = State.useSkill(id);
+    if (!used) return;
+    log(`Used: ${used.name}${used.maxUses > 0 ? ` — ${used.currentUses}/${used.maxUses} left` : ""}`, "ok");
+    if (used.diceFormula) {
+      showDicePopup(used, () => afterUse(used));
+    } else {
+      afterUse(used);
+    }
+  } catch (err) {
+    log("Use skill failed: " + (err.message || err), "warn");
   }
 }
 
@@ -87,14 +94,12 @@ function renderAll() {
   $("emptyHint").hidden = State.getSkills().length > 0;
 }
 
-// ---------- Tab switching ----------
 function switchTab(name) {
   document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
   $("playMode").classList.toggle("active", name === "play");
   $("setupMode").classList.toggle("active", name === "setup");
 }
 
-// ---------- Export / Import ----------
 function doExport() {
   const blob = new Blob([State.exportData()], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -119,14 +124,12 @@ function doImport(file) {
   reader.readAsText(file);
 }
 
-// ---------- Wire up ----------
 async function main() {
   logEl = $("log");
 
   document.querySelectorAll(".tab").forEach((b) =>
     b.addEventListener("click", () => switchTab(b.dataset.tab))
   );
-
   $("srestBtn").addEventListener("click", () => {
     State.shortRest();
     log("Short Rest — SRest skills refilled, per-turn actions reset", "ok");
@@ -139,10 +142,8 @@ async function main() {
     State.endTurn();
     log("End Turn — per-turn cards restored", "ok");
   });
-
   $("undoBtn").addEventListener("click", () => State.undo());
   $("redoBtn").addEventListener("click", () => State.redo());
-
   $("exportBtn").addEventListener("click", doExport);
   $("importBtn").addEventListener("click", () => $("importFile").click());
   $("importFile").addEventListener("change", (e) => {
@@ -150,7 +151,6 @@ async function main() {
     if (f) doImport(f);
     e.target.value = "";
   });
-
   $("addSkillBtn").addEventListener("click", () => {
     populateChainOptions($("f_chainTrigger"), null);
     openBuilder(null);
@@ -162,9 +162,14 @@ async function main() {
   $("cancelSkillBtn").addEventListener("click", () => closeBuilder());
 
   State.subscribe(renderAll);
-
-  await State.init();
-  log("Ready. Data saves to Owlbear player metadata (or localStorage outside OBR).", "ok");
+  // Render + wire UI instantly — never wait for Owlbear SDK.
+  State.initDefaultSync();
+  // Load cloud data in the background; re-render when it arrives.
+  State.init()
+    .then(() => log("Ready. Cloud + local save active.", "ok"))
+    .catch((err) => log("Init warning: " + (err.message || err), "warn"));
 }
 
-main();
+main().catch((err) => {
+  if (logEl) log("Fatal: " + (err.message || err), "warn");
+});

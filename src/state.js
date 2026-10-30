@@ -29,9 +29,20 @@ function persist() {
   saveState(state).catch((err) => console.warn("[state] persist failed", err));
 }
 
+// Render immediately with defaults so the UI is interactive even if OBR hangs.
+export function initDefaultSync() {
+  if (!state) state = defaultState();
+  emit();
+}
+
 export async function init() {
-  const loaded = await loadState();
-  state = loaded && Array.isArray(loaded.skills) ? loaded : defaultState();
+  initDefaultSync();
+  try {
+    const loaded = await loadState();
+    if (loaded && Array.isArray(loaded.skills)) state = loaded;
+  } catch (err) {
+    console.warn("[state] init load failed, using defaults:", err);
+  }
   emit();
 }
 export function getState() {
