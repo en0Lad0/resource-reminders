@@ -320,6 +320,11 @@ html, body {
   justify-content: center;
   z-index: 100;
 }
+/* CRITICAL: without !important, .overlay{display:flex} overrides the [hidden]
+   attribute, so the overlay is permanently visible and blocks all clicks. */
+.overlay[hidden] {
+  display: none !important;
+}
 .popup {
   background: var(--panel);
   border: 2px solid var(--accent);
