@@ -375,3 +375,33 @@ html, body {
   line-height: 1;
 }
 .popup-close:hover { color: var(--red); background: var(--panel-2); }
+
+/* Global Advantage / Disadvantage switches (rest bar) */
+.mode-global {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  transition: all 0.15s;
+}
+.mode-global:hover { border-color: var(--accent); color: var(--text); }
+.mode-global.active { color: #0d1117; border-color: transparent; }
+#advBtn.active { background: var(--green); }
+#disBtn.active { background: var(--red); }
+
+/* Two-stage roll popup labels */
+.roll-label {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 10px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+.damage-total { font-size: 28px; }
+.reminder-badge { color: var(--amber); font-weight: 700; }
+.reminder-text { color: var(--amber); font-style: italic; }

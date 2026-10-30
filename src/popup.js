@@ -1,8 +1,6 @@
-// Popup layer: dice result + chain combo prompt.
-// FIX: every popup now has a permanent close (X) button, backdrop-click closes,
-// and Escape closes. Chain prompt no longer disables backdrop click. This prevents
-// a stuck empty popup from blocking the whole UI.
-import { diceEngine } from "./dice.js";
+// Popup layer: two-stage attack roll (To Hit -> Damage, crit auto-double),
+// chain combo prompt, and reminder prompt. Every popup has X / backdrop / Escape.
+import { diceEngine, doubleDiceCount } from "./dice.js";
 
 const overlay = () => document.getElementById("overlay");
 const popup = () => document.getElementById("popup");
@@ -17,8 +15,6 @@ export function closePopup() {
   }
 }
 
-// Shared chrome: shows overlay, adds a permanent close button, backdrop + Escape.
-// onClose is called when the user dismisses via X / backdrop / Escape.
 function openPopupChrome(onClose) {
   const ov = overlay();
   const p = popup();
@@ -53,56 +49,54 @@ function openPopupChrome(onClose) {
   document.addEventListener("keydown", escapeHandler);
 }
 
-// Dice popup. Auto-rolls once on open; user can switch mode and re-roll.
-export function showDicePopup(skill, onDone) {
-  if (!skill || !skill.diceFormula) {
+const MODE_LABEL = { normal: "", advantage: " (Advantage)", disadvantage: " (Disadvantage)" };
+
+// Two-stage attack roll: roll To Hit (with mode), then roll Damage.
+// Nat 20 -> damage dice doubled automatically. Nat 1 -> no damage roll.
+export function showAttackPopup(skill, rollMode, onDone) {
+  const toHit = (skill.toHit || skill.diceFormula || "").trim();
+  const damage = (skill.damage || "").trim();
+  if (!toHit && !damage) {
     closePopup();
     onDone?.();
     return;
   }
   openPopupChrome(onDone);
   const p = popup();
-  let mode = "normal";
 
   const h = document.createElement("h3");
-  h.textContent = `${skill.name} — ${skill.diceFormula}`;
+  h.textContent = skill.name + (MODE_LABEL[rollMode] || "");
   p.appendChild(h);
 
-  const toggle = document.createElement("div");
-  toggle.className = "mode-toggle";
-  const modes = [
-    ["normal", "Normal"],
-    ["advantage", "Advantage"],
-    ["disadvantage", "Disadvantage"]
-  ];
-  modes.forEach(([val, label]) => {
-    const b = document.createElement("button");
-    b.textContent = label;
-    if (val === mode) b.classList.add("active");
-    b.addEventListener("click", () => {
-      mode = val;
-      [...toggle.children].forEach((x) => x.classList.remove("active"));
-      b.classList.add("active");
-      doRoll();
-    });
-    toggle.appendChild(b);
-  });
-  p.appendChild(toggle);
+  const toHitTotal = document.createElement("div");
+  toHitTotal.className = "dice-total";
+  const toHitDetail = document.createElement("div");
+  toHitDetail.className = "dice-detail";
+  const dmgTotal = document.createElement("div");
+  dmgTotal.className = "dice-total damage-total";
+  dmgTotal.hidden = true;
+  const dmgDetail = document.createElement("div");
+  dmgDetail.className = "dice-detail";
+  dmgDetail.hidden = true;
 
-  const totalEl = document.createElement("div");
-  totalEl.className = "dice-total";
-  totalEl.textContent = "…";
-  p.appendChild(totalEl);
-
-  const detailEl = document.createElement("div");
-  detailEl.className = "dice-detail";
-  p.appendChild(detailEl);
+  if (toHit) {
+    const lbl = document.createElement("div");
+    lbl.className = "roll-label";
+    lbl.textContent = "To Hit (" + toHit + ")";
+    p.append(lbl, toHitTotal, toHitDetail);
+  }
+  if (damage) {
+    const lbl = document.createElement("div");
+    lbl.className = "roll-label";
+    lbl.textContent = "Damage";
+    p.append(lbl, dmgTotal, dmgDetail);
+  }
 
   const btns = document.createElement("div");
   btns.className = "popup-buttons";
   const rollBtn = document.createElement("button");
   rollBtn.className = "btn primary";
-  rollBtn.textContent = "Re-roll";
+  rollBtn.textContent = toHit ? "Re-roll Attack" : "Re-roll";
   const closeBtn = document.createElement("button");
   closeBtn.className = "btn";
   closeBtn.textContent = "Done";
@@ -111,20 +105,51 @@ export function showDicePopup(skill, onDone) {
 
   async function doRoll() {
     try {
-      const res = await diceEngine.roll(skill.diceFormula, mode);
-      totalEl.textContent = res.total;
-      totalEl.className =
-        "dice-total " +
-        (res.crit === "hit" ? "crit-hit" : res.crit === "fail" ? "crit-fail" : "");
-      let detail = res.detailString();
-      if (res.advInfo) {
-        detail += `  |  ${res.mode}: [${res.advInfo.first.join(",")}] vs [${res.advInfo.second.join(",")}] → kept [${res.advInfo.kept.join(",")}]`;
+      if (toHit) {
+        const res = await diceEngine.roll(toHit, rollMode);
+        toHitTotal.textContent = res.total;
+        toHitTotal.className =
+          "dice-total " + (res.crit === "hit" ? "crit-hit" : res.crit === "fail" ? "crit-fail" : "");
+        let detail = res.detailString();
+        if (res.advInfo) {
+          detail += `  |  ${res.mode}: [${res.advInfo.first.join(",")}] vs [${res.advInfo.second.join(",")}] → kept [${res.advInfo.kept.join(",")}]`;
+        }
+        if (res.crit === "hit") detail += "   — CRITICAL HIT!";
+        if (res.crit === "fail") detail += "   — CRITICAL MISS!";
+        toHitDetail.textContent = detail;
+
+        if (damage) {
+          if (res.crit === "hit") {
+            const critFormula = doubleDiceCount(damage);
+            const dmg = await diceEngine.roll(critFormula, "normal");
+            dmgTotal.hidden = false;
+            dmgDetail.hidden = false;
+            dmgTotal.textContent = dmg.total + "  (×2 dice)";
+            dmgTotal.className = "dice-total damage-total crit-hit";
+            dmgDetail.textContent = "CRITICAL! " + critFormula + "  →  " + dmg.detailString();
+          } else if (res.crit === "fail") {
+            dmgTotal.hidden = false;
+            dmgDetail.hidden = false;
+            dmgTotal.textContent = "—";
+            dmgTotal.className = "dice-total damage-total crit-fail";
+            dmgDetail.textContent = "Critical miss — no damage roll.";
+          } else {
+            const dmg = await diceEngine.roll(damage, "normal");
+            dmgTotal.hidden = false;
+            dmgDetail.hidden = false;
+            dmgTotal.textContent = dmg.total;
+            dmgTotal.className = "dice-total damage-total";
+            dmgDetail.textContent = damage + "  →  " + dmg.detailString();
+          }
+        }
+      } else {
+        const dmg = await diceEngine.roll(damage, "normal");
+        toHitTotal.textContent = dmg.total;
+        toHitTotal.className = "dice-total damage-total";
+        toHitDetail.textContent = damage + "  →  " + dmg.detailString();
       }
-      if (res.crit === "hit") detail += "   — CRITICAL HIT!";
-      if (res.crit === "fail") detail += "   — CRITICAL FAIL!";
-      detailEl.textContent = detail;
     } catch (err) {
-      detailEl.textContent = "Roll error: " + err.message;
+      toHitDetail.textContent = "Roll error: " + err.message;
     }
   }
 
@@ -137,25 +162,56 @@ export function showDicePopup(skill, onDone) {
   doRoll();
 }
 
+// Reminder prompt: shows a warning before a skill is consumed.
+export function showReminderPrompt(text, onYes, onNo) {
+  openPopupChrome(onNo);
+  const p = popup();
+  const h = document.createElement("h3");
+  h.textContent = "Reminder";
+  p.appendChild(h);
+  const t = document.createElement("div");
+  t.className = "chain-text reminder-text";
+  t.textContent = text;
+  p.appendChild(t);
+  const btns = document.createElement("div");
+  btns.className = "popup-buttons";
+  const yes = document.createElement("button");
+  yes.className = "btn accent";
+  yes.textContent = "Continue";
+  const no = document.createElement("button");
+  no.className = "btn";
+  no.textContent = "Cancel";
+  btns.append(yes, no);
+  p.appendChild(btns);
+  yes.addEventListener("click", () => {
+    closePopup();
+    onYes();
+  });
+  no.addEventListener("click", () => {
+    closePopup();
+    onNo();
+  });
+}
+
 // Chain combo prompt: "You used A. Chain into B?"
-// Dismissing via X / backdrop / Escape = Skip (onNo).
 export function showChainPrompt(fromSkill, toSkill, onYes, onNo) {
   openPopupChrome(onNo);
   const p = popup();
-
   const h = document.createElement("h3");
   h.textContent = "Combo Available";
   p.appendChild(h);
-
   const t = document.createElement("div");
   t.className = "chain-text";
   if (fromSkill && toSkill) {
-    t.innerHTML = `You used <b>${fromSkill.name}</b>.<br/>You can chain into <b>${toSkill.name}</b>.<br/>Use it now?`;
+    const modeNote =
+      fromSkill.chainRollMode && fromSkill.chainRollMode !== "none"
+        ? `<br/><i>(${fromSkill.chainRollMode === "advantage" ? "with Advantage" : "with Disadvantage"})</i>`
+        : "";
+    t.innerHTML = `You used <b>${fromSkill.name}</b>.<br/>You can chain into <b>${toSkill.name}</b>.${modeNote}<br/>Use it now?`;
   } else {
     t.textContent = "Combo target unavailable.";
   }
   p.appendChild(t);
-
   const btns = document.createElement("div");
   btns.className = "popup-buttons";
   if (fromSkill && toSkill) {

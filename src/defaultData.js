@@ -1,12 +1,11 @@
 // Sample character (Rogue lvl 3) so Play Mode is usable out of the box.
-// Replace with your own via Setup Mode or JSON import.
-
+// New schema: toHit (attack roll), damage (damage roll), chainRollMode, reminder.
+// diceFormula kept only as a deprecated alias for old imports.
 let idCounter = 0;
 export function newId() {
   idCounter += 1;
   return `skill_${Date.now().toString(36)}_${idCounter}`;
 }
-
 export function defaultState() {
   const sneakAttack = {
     id: "sneak_attack",
@@ -17,8 +16,12 @@ export function defaultState() {
     currentUses: 0,
     recoverOn: "None",
     perTurn: true,
+    toHit: "",
+    damage: "2d6",
     diceFormula: "2d6",
     chainTrigger: null,
+    chainRollMode: "none",
+    reminder: "Requires advantage OR an ally within 5ft of the target.",
     order: 0,
     usedThisTurn: false
   };
@@ -31,13 +34,17 @@ export function defaultState() {
     currentUses: 0,
     recoverOn: "None",
     perTurn: true,
+    toHit: "1d20+5",
+    damage: "1d6+3",
     diceFormula: "1d20+5",
-    chainTrigger: "sneak_attack", // hit -> prompt Sneak Attack combo
+    chainTrigger: "sneak_attack",
+    chainRollMode: "none",
+    reminder: "",
     order: 0,
     usedThisTurn: false
   };
   return {
-    version: 1,
+    version: 2,
     skills: [
       attack,
       {
@@ -49,8 +56,12 @@ export function defaultState() {
         currentUses: 0,
         recoverOn: "None",
         perTurn: true,
+        toHit: "1d20+5",
+        damage: "1d6",
         diceFormula: "1d20+5",
         chainTrigger: "sneak_attack",
+        chainRollMode: "none",
+        reminder: "",
         order: 1,
         usedThisTurn: false
       },
@@ -64,8 +75,12 @@ export function defaultState() {
         currentUses: 0,
         recoverOn: "None",
         perTurn: true,
+        toHit: "",
+        damage: "",
         diceFormula: "",
         chainTrigger: null,
+        chainRollMode: "none",
+        reminder: "",
         order: 2,
         usedThisTurn: false
       },
@@ -78,8 +93,12 @@ export function defaultState() {
         currentUses: 1,
         recoverOn: "SRest",
         perTurn: false,
+        toHit: "",
+        damage: "1d10+3",
         diceFormula: "1d10+3",
         chainTrigger: null,
+        chainRollMode: "none",
+        reminder: "",
         order: 3,
         usedThisTurn: false
       },
@@ -92,8 +111,12 @@ export function defaultState() {
         currentUses: 3,
         recoverOn: "LRest",
         perTurn: false,
+        toHit: "1d20",
+        damage: "",
         diceFormula: "1d20",
         chainTrigger: null,
+        chainRollMode: "none",
+        reminder: "After seeing the roll, choose which d20 to use.",
         order: 4,
         usedThisTurn: false
       }

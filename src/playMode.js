@@ -13,7 +13,6 @@ export function isCardHidden(s) {
 function buildCard(handlers) {
   const card = document.createElement("div");
   card.className = "skill-card";
-
   const head = document.createElement("div");
   head.className = "card-head";
   const name = document.createElement("span");
@@ -28,15 +27,13 @@ function buildCard(handlers) {
     handlers.onRoll(card.dataset.id);
   });
   head.append(name, uses, diceBtn);
-
   const desc = document.createElement("div");
   desc.className = "card-desc";
-
   const meta = document.createElement("div");
   meta.className = "card-meta";
-
   card.append(head, desc, meta);
-  card.addEventListener("click", () => handlers.onUse(card.dataset.id));
+  // pass the click event so Shift+Click can force advantage
+  card.addEventListener("click", (e) => handlers.onUse(card.dataset.id, e));
   return card;
 }
 
@@ -46,14 +43,15 @@ function updateCard(card, s) {
   card.querySelector(".card-uses").textContent =
     s.maxUses > 0 ? `${s.currentUses}/${s.maxUses}` : "∞";
   const diceBtn = card.querySelector(".card-dice");
-  if (s.diceFormula) {
-    diceBtn.textContent = s.diceFormula;
+  const toHit = (s.toHit || s.diceFormula || "").trim();
+  const damage = (s.damage || "").trim();
+  if (toHit || damage) {
+    diceBtn.textContent = toHit || damage;
     diceBtn.style.display = "";
   } else {
     diceBtn.style.display = "none";
   }
   card.querySelector(".card-desc").textContent = s.description || "";
-
   const meta = card.querySelector(".card-meta");
   meta.innerHTML = "";
   const rec = document.createElement("span");
@@ -64,13 +62,27 @@ function updateCard(card, s) {
     t.textContent = "Per Turn";
     meta.appendChild(t);
   }
+  if (damage) {
+    const d = document.createElement("span");
+    d.textContent = `Dmg: ${damage}`;
+    meta.appendChild(d);
+  }
   if (s.chainTrigger) {
     const target = getSkills().find((x) => x.id === s.chainTrigger);
+    const modeNote =
+      s.chainRollMode && s.chainRollMode !== "none"
+        ? ` (${s.chainRollMode === "advantage" ? "Adv" : "Dis"})`
+        : "";
     const t = document.createElement("span");
-    t.textContent = `Chain: ${target?.name || "?"}`;
+    t.textContent = `Chain: ${target?.name || "?"}${modeNote}`;
     meta.appendChild(t);
   }
-
+  if (s.reminder) {
+    const r = document.createElement("span");
+    r.className = "reminder-badge";
+    r.textContent = "⚠ Reminder set";
+    meta.appendChild(r);
+  }
   card.classList.toggle("exhausted", isCardHidden(s));
 }
 
@@ -79,19 +91,16 @@ export function renderPlay(container, handlers) {
   container.innerHTML = "";
   const cats = [...new Set(skills.map((s) => s.category))];
   const usedIds = new Set();
-
   for (const cat of cats) {
     const group = skills
       .filter((s) => s.category === cat)
       .sort((a, b) => (a.order || 0) - (b.order || 0));
-    if (group.every(isCardHidden)) continue; // hide fully-exhausted categories
-
+    if (group.every(isCardHidden)) continue;
     const wrap = document.createElement("div");
     wrap.className = "category-group";
     const h = document.createElement("h3");
     h.textContent = cat;
     wrap.appendChild(h);
-
     const cards = document.createElement("div");
     cards.className = "category-cards";
     for (const s of group) {
@@ -107,7 +116,6 @@ export function renderPlay(container, handlers) {
     wrap.appendChild(cards);
     container.appendChild(wrap);
   }
-
   for (const id of [...cardCache.keys()]) {
     if (!usedIds.has(id)) cardCache.delete(id);
   }
@@ -117,7 +125,7 @@ export function highlightCard(id) {
   const card = cardCache.get(id);
   if (card) {
     card.classList.remove("chain-highlight");
-    void card.offsetWidth; // restart animation
+    void card.offsetWidth;
     card.classList.add("chain-highlight");
   }
 }

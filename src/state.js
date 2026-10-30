@@ -35,6 +35,18 @@ export function initDefaultSync() {
   emit();
 }
 
+// Migrate old schema (diceFormula) -> new schema (toHit / damage / chainRollMode / reminder).
+function migrateState() {
+  if (!state || !Array.isArray(state.skills)) return;
+  state.skills.forEach((s) => {
+    if (!s.toHit && s.diceFormula) s.toHit = s.diceFormula;
+    if (!s.toHit) s.toHit = "";
+    if (!s.damage) s.damage = "";
+    if (!s.chainRollMode) s.chainRollMode = "none";
+    if (!s.reminder) s.reminder = "";
+  });
+}
+
 export async function init() {
   initDefaultSync();
   try {
@@ -43,6 +55,7 @@ export async function init() {
   } catch (err) {
     console.warn("[state] init load failed, using defaults:", err);
   }
+  migrateState();
   emit();
 }
 export function getState() {
