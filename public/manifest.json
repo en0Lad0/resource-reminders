@@ -1,9 +1,9 @@
 {
   "name": "Resource Reminders",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "manifest_version": 1,
   "description": "D&D combat action economy tracker: skill cards, resource uses, rest recovery, chain combos, and dice roller.",
-  "author": "Your Name",
+  "author": "En0Lad0",
   "icon": "https://en0Lad0.github.io/resource-reminders/icon.png",
   "action": {
     "title": "Resource Reminders",
