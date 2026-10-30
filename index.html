@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Resource Reminders</title>
+    <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+  </head>
+  <body>
+    <div id="app">
+      <!-- Tab bar -->
+      <header class="tabbar">
+        <div class="brand">
+          <span class="brand-die">d20</span>
+          <span class="brand-name">Resource Reminders</span>
+        </div>
+        <nav class="tabs">
+          <button class="tab active" data-tab="play">Play Mode</button>
+          <button class="tab" data-tab="setup">Setup Mode</button>
+        </nav>
+        <div class="history-actions">
+          <button id="undoBtn" class="icon-btn" title="Undo (last 3 steps)">↶ Undo</button>
+          <button id="redoBtn" class="icon-btn" title="Redo">↷ Redo</button>
+        </div>
+      </header>
+
+      <!-- PLAY MODE -->
+      <section id="playMode" class="panel active">
+        <!-- Top bar: always visible rest buttons -->
+        <div class="rest-bar">
+          <button id="srestBtn" class="rest-btn short">SRest</button>
+          <button id="lrestBtn" class="rest-btn long">LRest</button>
+          <div class="rest-spacer"></div>
+          <button id="endTurnBtn" class="endturn-btn">End Turn ⟳</button>
+        </div>
+
+        <!-- Skill cards render here, grouped by category -->
+        <div id="skillContainer" class="skill-container"></div>
+
+        <div id="emptyHint" class="empty-hint" hidden>
+          ยังไม่มีสกิล — ไปที่แท็บ <b>Setup Mode</b> เพื่อเพิ่มสกิล หรือกด Import JSON
+        </div>
+      </section>
+
+      <!-- SETUP MODE -->
+      <section id="setupMode" class="panel">
+        <div class="setup-actions">
+          <button id="exportBtn" class="btn primary">⤓ Export JSON</button>
+          <button id="importBtn" class="btn">⤒ Import JSON</button>
+          <input type="file" id="importFile" accept="application/json,.json" hidden />
+          <button id="addSkillBtn" class="btn accent">+ Add Skill</button>
+        </div>
+
+        <!-- Builder form (hidden until Add / Edit) -->
+        <div id="builder" class="builder" hidden>
+          <h3 id="builderTitle">Add Skill</h3>
+          <div class="form-grid">
+            <label>Skill Name
+              <input type="text" id="f_name" placeholder="e.g. Sneak Attack" />
+            </label>
+            <label>Category
+              <input type="text" id="f_category" list="categoryList" placeholder="Action / Bonus Action / Feature / Feat" />
+              <datalist id="categoryList"></datalist>
+            </label>
+            <label>Max Uses (0 = at-will / unlimited)
+              <input type="number" id="f_maxUses" min="0" value="0" />
+            </label>
+            <label>Recover On
+              <select id="f_recoverOn">
+                <option value="SRest">Short Rest</option>
+                <option value="LRest">Long Rest</option>
+                <option value="None">None</option>
+              </select>
+            </label>
+            <label>Reset on End Turn (per-turn actions like Attack)
+              <select id="f_perTurn">
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+              </select>
+            </label>
+            <label>Dice Formula (e.g. 1d20+5, 2d6+3, 1d10-1)
+              <input type="text" id="f_diceFormula" placeholder="1d20+5" />
+            </label>
+            <label>Chain Trigger (combo prompt after use)
+              <select id="f_chainTrigger"></select>
+            </label>
+            <label class="full">Custom Text (always visible, no hover)
+              <textarea id="f_description" rows="2" placeholder="เงื่อนไข, หมายเหตุ, หรือคำอธิบายสกิล"></textarea>
+            </label>
+          </div>
+          <div class="builder-buttons">
+            <button id="saveSkillBtn" class="btn primary">Save</button>
+            <button id="cancelSkillBtn" class="btn">Cancel</button>
+          </div>
+        </div>
+
+        <!-- Skill list with sorting -->
+        <div id="setupList" class="setup-list"></div>
+      </section>
+
+      <footer class="logbar">
+        <div id="log" class="log"></div>
+      </footer>
+    </div>
+
+    <!-- Popup layer (dice result + chain prompt) -->
+    <div id="overlay" class="overlay" hidden>
+      <div id="popup" class="popup"></div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
