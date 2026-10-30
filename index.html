@@ -23,25 +23,23 @@
           <button id="redoBtn" class="icon-btn" title="Redo">↷ Redo</button>
         </div>
       </header>
-
       <!-- PLAY MODE -->
       <section id="playMode" class="panel active">
-        <!-- Top bar: always visible rest buttons -->
+        <!-- Top bar: rest buttons + global advantage/disadvantage switches -->
         <div class="rest-bar">
           <button id="srestBtn" class="rest-btn short">SRest</button>
           <button id="lrestBtn" class="rest-btn long">LRest</button>
           <div class="rest-spacer"></div>
+          <button id="advBtn" class="mode-global" title="Global Advantage — applies to all to-hit rolls until toggled off. Shift+Click a skill also forces Advantage.">Adv</button>
+          <button id="disBtn" class="mode-global" title="Global Disadvantage — applies to all to-hit rolls until toggled off.">Dis</button>
           <button id="endTurnBtn" class="endturn-btn">End Turn ⟳</button>
         </div>
-
         <!-- Skill cards render here, grouped by category -->
         <div id="skillContainer" class="skill-container"></div>
-
         <div id="emptyHint" class="empty-hint" hidden>
           ยังไม่มีสกิล — ไปที่แท็บ <b>Setup Mode</b> เพื่อเพิ่มสกิล หรือกด Import JSON
         </div>
       </section>
-
       <!-- SETUP MODE -->
       <section id="setupMode" class="panel">
         <div class="setup-actions">
@@ -50,7 +48,6 @@
           <input type="file" id="importFile" accept="application/json,.json" hidden />
           <button id="addSkillBtn" class="btn accent">+ Add Skill</button>
         </div>
-
         <!-- Builder form (hidden until Add / Edit) -->
         <div id="builder" class="builder" hidden>
           <h3 id="builderTitle">Add Skill</h3>
@@ -78,11 +75,24 @@
                 <option value="false">No</option>
               </select>
             </label>
-            <label>Dice Formula (e.g. 1d20+5, 2d6+3, 1d10-1)
-              <input type="text" id="f_diceFormula" placeholder="1d20+5" />
+            <label>To Hit Roll (e.g. 1d20+5 — leave empty if no attack roll)
+              <input type="text" id="f_toHit" placeholder="1d20+5" />
+            </label>
+            <label>Damage Roll (e.g. 1d6+3 — auto ×2 on nat20; leave empty if none)
+              <input type="text" id="f_damage" placeholder="1d6+3" />
             </label>
             <label>Chain Trigger (combo prompt after use)
               <select id="f_chainTrigger"></select>
+            </label>
+            <label>Chain Roll Mode (roll mode applied to the chained skill)
+              <select id="f_chainRollMode">
+                <option value="none">None (use global mode)</option>
+                <option value="advantage">Advantage</option>
+                <option value="disadvantage">Disadvantage</option>
+              </select>
+            </label>
+            <label>Reminder (pops up before using this skill — leave empty to disable)
+              <input type="text" id="f_reminder" placeholder="e.g. Requires advantage or ally within 5ft" />
             </label>
             <label class="full">Custom Text (always visible, no hover)
               <textarea id="f_description" rows="2" placeholder="เงื่อนไข, หมายเหตุ, หรือคำอธิบายสกิล"></textarea>
@@ -93,21 +103,17 @@
             <button id="cancelSkillBtn" class="btn">Cancel</button>
           </div>
         </div>
-
         <!-- Skill list with sorting -->
         <div id="setupList" class="setup-list"></div>
       </section>
-
       <footer class="logbar">
         <div id="log" class="log"></div>
       </footer>
     </div>
-
     <!-- Popup layer (dice result + chain prompt) -->
     <div id="overlay" class="overlay" hidden>
       <div id="popup" class="popup"></div>
     </div>
-
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
