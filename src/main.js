@@ -121,16 +121,20 @@ function handleRollOnly(id) {
 
 // ---------- Render on every state change ----------
 function renderAll() {
-  renderPlay($("skillContainer"), { onUse: handleUse, onRoll: handleRollOnly });
-  renderSetup($("setupList"), {
-    onEdit: (s) => openBuilder(s),
-    onDelete: (id) => State.deleteSkill(id),
-    onMove: (id, dir) => State.moveSkill(id, dir)
-  });
-  populateCategories($("categoryList"));
-  $("undoBtn").disabled = !State.canUndo();
-  $("redoBtn").disabled = !State.canRedo();
-  $("emptyHint").hidden = State.getSkills().length > 0;
+  try {
+    renderPlay($("skillContainer"), { onUse: handleUse, onRoll: handleRollOnly });
+    renderSetup($("setupList"), {
+      onEdit: (s) => openBuilder(s),
+      onDelete: (id) => State.deleteSkill(id),
+      onMove: (id, dir) => State.moveSkill(id, dir)
+    });
+    populateCategories($("categoryList"));
+    $("undoBtn").disabled = !State.canUndo();
+    $("redoBtn").disabled = !State.canRedo();
+    $("emptyHint").hidden = State.getSkills().length > 0;
+  } catch (err) {
+    log("Render error: " + (err.message || err), "warn");
+  }
 }
 
 function switchTab(name) {

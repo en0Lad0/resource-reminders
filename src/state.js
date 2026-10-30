@@ -6,7 +6,9 @@ import { resetChain } from "./chain.js";
 
 const MAX_HISTORY = 3;
 
-let state = null;
+// Initialize with defaults immediately so state is NEVER null (prevents
+// "Cannot read properties of null (reading 'skills')" during async init).
+let state = defaultState();
 let history = []; // snapshots before mutations (oldest first), capped at 3
 let future = [];  // redo stack
 const listeners = new Set();
@@ -21,6 +23,7 @@ function emit() {
   listeners.forEach((fn) => fn(state));
 }
 function snapshot() {
+  if (!state || !Array.isArray(state.skills)) return;
   history.push(clone(state.skills));
   if (history.length > MAX_HISTORY) history.shift();
   future = [];
